@@ -1,3 +1,5 @@
+part of tagser;
+
 abstract class TagserMessage {
   String getName();
 }

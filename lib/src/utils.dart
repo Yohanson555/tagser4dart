@@ -1,4 +1,4 @@
-import 'package:stubble/const.dart';
+part of tagser;
 
 class TagserUtils {
   static bool isAvailableCharacter(int charCode) {

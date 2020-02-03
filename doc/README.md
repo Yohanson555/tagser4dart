@@ -1,8 +1,10 @@
 ## Overview
+                                                                                                          
+`Tagser` - is a simple tag-based document parser. 
 
-A library for Dart developers.
+There is no restrictions about what tags a source document can contain. 
 
-Simple tag-based document parser. It is not about HTML parsing. You can use whatever tags you want.
+You can parse documents with your own tags like `<someTag>`
 
 Available types of tags:
 - Self closing tags: <tag [attributes]/>
@@ -27,6 +29,10 @@ main() {
 }
 ```
 
+As a result of parse command you will receive a `List` of `Tag`s.
+
+Each text value will be interpreted as a `Tag` with `text` type.
+
 ## Notes
 
 - Tag names are case sensitive. Open and close tags in block tag declaration should have the same spelling
@@ -40,10 +46,3 @@ main() {
  - `<tag A = 'value'` /> - error
  - `<tag A= 'value'` /> - error
  - `<tag A ='value'` /> - error
- 
-## Options
-
-You can pass options to the `Tagser` constructor or set them with `setOption()` method.
-
-Available options:
-- `ignoreCase` - enables or disables case ignoring of opening and closing tag; `false` by default

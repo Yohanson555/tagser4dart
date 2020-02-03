@@ -1,3 +1,8 @@
+part of tagser;
+
+const TYPE_TAG = 'tag';
+const TYPE_TEXT = 'text';
+
 const CHAR_BACK_SLASH = 92; // \
 const CHAR_SLASH = 47; // /
 const CHAR_ENTER = 10; // '\n'
@@ -30,6 +35,8 @@ const ERROR_WRONG_CLOSE_TAG = 6;
 const ERROR_ATTR_NAME_EMPTY = 7;
 const ERROR_ATTR_VALUE_EMPTY = 8;
 const ERROR_ATTR_VALUE_MALFORMED = 9;
+const ERROR_UNEXPECTED_EOS = 10;
+const ERROR_END_OF_TAG = 11;
 
 const messages = {
   ERROR_WRONG_TAG_CHARACTER: "Wrong tag name character: {{char}}",
@@ -41,6 +48,8 @@ const messages = {
   ERROR_ATTR_NAME_EMPTY: "Attribute malformed: empty name",
   ERROR_ATTR_VALUE_EMPTY: "Attribute malformed: empty value",
   ERROR_ATTR_VALUE_MALFORMED: "Attribute value malfromed: the attribute value should be a string",
+  ERROR_UNEXPECTED_EOS: "Unexpected end of source",
+  ERROR_END_OF_TAG: "Unexpected end of tag \"{{tag}}\" ({{line}}:{{symbol}})",
 };
 
 
@@ -50,7 +59,7 @@ String getError(int code, Map values) {
   if (message.isNotEmpty) {
     if (values != null && values.isNotEmpty) {
       values.forEach((k,v) {
-        message = message.replaceAll('{{$k}}', v);
+        message = message.replaceAll('{{$k}}', v.toString());
       });
     }
   }

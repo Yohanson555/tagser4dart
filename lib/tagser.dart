@@ -1,71 +1,99 @@
-import 'package:meta/meta.dart';
-import 'package:stubble/states.dart';
-import 'package:stubble/messages.dart';
-import 'package:stubble/const.dart';
+library tagser;
 
-const TYPE_TAG = 'tag';
-const TYPE_TEXT = 'text';
+part 'src/attribute.dart';
+
+part 'src/const.dart';
+
+part 'src/context.dart';
+
+part 'src/error.dart';
+
+part 'src/messages.dart';
+
+part 'src/result.dart';
+
+part 'src/states.dart';
+
+part 'src/tag.dart';
+
+part 'src/utils.dart';
 
 class Tagser {
+  Map<String, dynamic> _options = {
+    'ignoreCase': false,
+  };
+
   List<TagserState> _stack;
   int _line = 0; // template lining support
   int _symbol = 0;
+
+  Tagser({Map<String, dynamic> options}) {
+    if (options != null) {
+      _options.addAll(options);
+    }
+  }
 
   List<Tag> parse(String source) {
     _stack = [];
     _stack.add(RootState(null));
 
+    final context = TagserContext(
+      options: _options,
+    );
+
     if (source != null && source.isNotEmpty) {
       final lines = source.split('\n');
 
       for (var l = 0; l < lines.length; l++) {
-        _line = l;
+        _line = l + 1;
         final line = lines[l];
 
         for (var i = 0; i < line.length; i++) {
           //print('Current state is: ${_stack.last}');
-          _symbol = i;
+          _symbol = i + 1;
           final charCode = line.codeUnitAt(i);
 
           //print('Pocessing char "${String.fromCharCode(charCode)}"; State - ${_stack.last.toString()}');
           //print("char: ${line[i]}");
 
-          process(ProcessMessage(charCode: charCode));
+          context.symbol = _symbol;
+          context.line = _line;
+
+          process(ProcessMessage(charCode: charCode), context);
         }
 
         //if (l < lines.length - 1) {
-          //process(ProcessMessage(charCode: CHARS.ENTER));
+        //process(ProcessMessage(charCode: CHARS.ENTER));
         //}
       }
 
-      process(ProcessMessage(charCode: CHAR_EOS));
+      process(ProcessMessage(charCode: CHAR_EOS), context);
 
       final state = _stack.last;
 
-      if (_stack.length != 1 || !(state is RootState) ) {
-        throw Exception(
-            'Source document malformed.');
+      if (_stack.length != 1 || !(state is RootState)) {
+        throw Exception('Source document malformed.');
       } else {
-        return (state as RootState).tags ;
+        return (state as RootState).tags;
       }
     }
 
     return null;
   }
 
-  void process(TagserMessage msg) {
+  void process(TagserMessage msg, TagserContext context) {
     final state = _stack.last;
 
     if (state != null && state.canAcceptMessage(msg)) {
-      final res = state.processMessage(msg);
+      final res = state.processMessage(msg, context);
 
       if (res != null) {
-        processResult(res);
+        processResult(res, context);
       }
     }
   }
 
-  void processResult(TagserResult r) {
+  void processResult(TagserResult r, TagserContext context) {
     if (r.pop == true) {
       pop();
     }
@@ -75,7 +103,7 @@ class Tagser {
     }
 
     if (r.message != null) {
-      process(r.message);
+      process(r.message, context);
     }
 
     if (r.err != null) {
@@ -92,94 +120,14 @@ class Tagser {
   }
 
   int get currentLine {
-    return _line + 1;
-  }
-}
-
-class Tag {
-  String _name;
-  String _type;
-  Map<String, TagAttribute> _attributes;
-  List<Tag> _childs;
-  String _body;
-
-  Tag(String name, String type, [String body]) {
-    _name = name;
-    _type = type;
-    _body = body;
-    _attributes = {};
-    _childs = [];
+    return _line;
   }
 
-  addAttr(TagAttribute attr) {
-    if (_attributes == null) _attributes = {};
+  setOption(String name, dynamic value) {
+    if (name != null && name.isNotEmpty) {
+      if (_options == null) _options = {};
 
-    if (attr != null) {
-      _attributes[attr.name] = attr;
+      _options[name] = value;
     }
   }
-
-  addChild(Tag child) {
-    if (_childs == null) _childs = [];
-
-    _childs.add(child);
-  }
-
-  attrValue(String name) {
-    if (_attributes.containsKey(name)) {
-      return _attributes[name].value;
-    }
-
-    return null;
-  }
-
-  String get name {
-    return _name;
-  }
-
-  String get type {
-    return _type;
-  }
-
-  String get body {
-    return _body;
-  }
-
-  List<Tag> get childs {
-    return _childs;
-  }
-
-  Map<String, TagAttribute> get attributes {
-    return _attributes;
-  }
-}
-
-class TagAttribute {
-  final String name;
-  final String value;
-
-  TagAttribute({@required this.name, @required this.value});
-}
-
-class TagserResult {
-  TagserState state;
-  bool pop;
-  TagserError err;
-  String result;
-  TagserMessage message;
-
-  TagserResult({
-    this.state,
-    this.message,
-    this.pop,
-    this.err,
-    this.result,
-  });
-}
-
-class TagserError {
-  final int code;
-  final String text;
-
-  TagserError({this.code, this.text});
 }
