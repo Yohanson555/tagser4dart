@@ -1,4 +1,4 @@
-# Tagser for Dart ![Coverage](https://raw.githubusercontent.com/Yohanson555/stubble4dart/master/coverage_badge.svg?sanitize=true)
+# Tagser for Dart ![Coverage](https://raw.githubusercontent.com/Yohanson555/tagser4dart/master/coverage_badge.svg?sanitize=true)
 
 ## Overview
 
