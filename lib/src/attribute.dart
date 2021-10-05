@@ -4,5 +4,8 @@ class TagAttribute {
   final String name;
   final String value;
 
-  TagAttribute({this.name, this.value});
+  TagAttribute({
+    required this.name,
+    required this.value,
+  });
 }

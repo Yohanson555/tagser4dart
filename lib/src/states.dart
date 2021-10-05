@@ -4,24 +4,20 @@ class TagserState {
   Map<String, Function> methods = {};
 
   bool canAcceptMessage(TagserMessage msg) {
-    if (msg != null) {
-      final messageName = msg.getName();
+    final messageName = msg.getName();
 
-      if (methods[messageName] != null) {
-        return true;
-      }
+    if (methods[messageName] != null) {
+      return true;
     }
 
     return false;
   }
 
-  TagserResult processMessage(TagserMessage msg, TagserContext context) {
-    if (msg != null) {
-      final messageName = msg.getName();
+  TagserResult? processMessage(TagserMessage msg, TagserContext context) {
+    final messageName = msg.getName();
 
-      if (methods[messageName] != null) {
-        return methods[messageName](msg, context);
-      }
+    if (methods[messageName] != null) {
+      return methods[messageName]!(msg, context);
     }
 
     return null;
@@ -37,13 +33,13 @@ class TagserState {
 
 class RootState extends TagserState {
   List<Tag> tags = [];
-  Tag _openedTag;
-  String _text;
-  bool _escape;
-  bool _opened;
+  Tag? _openedTag;
+  String _text = '';
+  bool _escape = false;
+  bool _opened = false;
 
-  RootState(Tag tag) {
-    this._openedTag = tag;
+  RootState(Tag? tag) {
+    _openedTag = tag;
 
     methods = {
       'process': (msg, context) => process(msg, context),
@@ -54,26 +50,24 @@ class RootState extends TagserState {
   @override
   String toString() {
     if (_openedTag != null) {
-      return runtimeType.toString() + '(${_openedTag.name})';
+      return runtimeType.toString() + '(${_openedTag!.name})';
     }
 
     return runtimeType.toString();
   }
 
-  TagserResult process(ProcessMessage msg, TagserContext context) {
+  TagserResult? process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
-    _text ??= '';
-
-    if (charCode == CHAR_EOS) {
+    if (charCode == charEos) {
       if (_openedTag != null) {
         return TagserResult(
           err: TagserError(
-            code: ERROR_END_OF_TAG,
-            text: getError(ERROR_END_OF_TAG, {
-              "tag": _openedTag.name,
-              "line": _openedTag.line,
-              "symbol": _openedTag.symbol,
+            code: errorEndOfTag,
+            text: getError(errorEndOfTag, {
+              "tag": _openedTag!.name,
+              "line": _openedTag!.line,
+              "symbol": _openedTag!.symbol,
             }),
           ),
         );
@@ -84,9 +78,9 @@ class RootState extends TagserState {
         tags.add(
           Tag(
               name: '',
-              type: TYPE_TEXT,
+              type: typeText,
               body: _text,
-              symbol: context.symbol,
+              symbol: context.symbol ?? 0,
               line: context.line),
         );
         _text = '';
@@ -101,10 +95,10 @@ class RootState extends TagserState {
             charCode: charCode,
           ),
         );
-      } else if (charCode == CHAR_SLASH) {
-        if (_openedTag != null && _openedTag != null) {
+      } else if (charCode == charSlash) {
+        if (_openedTag != null) {
           return TagserResult(
-            state: CloseTag(_openedTag.name),
+            state: CloseTag(_openedTag!.name ?? ''),
             message: InitMessage(
               charCode: charCode,
             ),
@@ -113,19 +107,19 @@ class RootState extends TagserState {
 
         return TagserResult(
             err: TagserError(
-                code: ERROR_SOURCE_DOCUMENT_MALFORMED,
-                text: getError(ERROR_SOURCE_DOCUMENT_MALFORMED, null)));
+                code: errorSourceDocumentMalformed,
+                text: getError(errorSourceDocumentMalformed, null)));
       } else {
         return TagserResult(
             err: TagserError(
-                code: ERROR_TAG_MALFORMED,
-                text: getError(ERROR_TAG_MALFORMED, null)));
+                code: errorTagMalformed,
+                text: getError(errorTagMalformed, null)));
       }
     } else if (_escape == true) {
-      _text += String.fromCharCode(charCode);
-    } else if (charCode == CHAR_BACK_SLASH) {
+      _text += String.fromCharCode(charCode!);
+    } else if (charCode == charBackSlash) {
       _escape = true;
-    } else if (charCode == CHAR_OPEN_BRACKET) {
+    } else if (charCode == charOpenBracket) {
       _opened = true;
 
       _text = _text.trim();
@@ -134,33 +128,33 @@ class RootState extends TagserState {
         tags.add(
           Tag(
               name: '',
-              type: TYPE_TEXT,
+              type: typeText,
               body: _text,
-              symbol: context.symbol,
+              symbol: context.symbol ?? 0,
               line: context.line),
         );
         _text = '';
       }
     } else {
-      _text += String.fromCharCode(charCode);
+      _text += String.fromCharCode(charCode!);
     }
 
     return null;
   }
 
-  TagserResult notify(NotifyMessage msg, TagserContext context) {
+  TagserResult? notify(NotifyMessage msg, TagserContext context) {
     switch (msg.type) {
-      case NOTIFY_TAG_RESULT:
+      case notifyTagResult:
         tags.add(msg.value);
 
         break;
-      case NOTIFY_CLOSE_TAG_FOUND:
+      case notifyCloseTagFound:
         return TagserResult(
           pop: true,
           message: NotifyMessage(
             charCode: msg.charCode,
             value: tags,
-            type: NOTIFY_CLOSE_TAG,
+            type: notifyCloseTag,
           ),
         );
       default:
@@ -174,7 +168,7 @@ class RootState extends TagserState {
 /// TAG STATE
 
 class TagState extends TagserState {
-  Tag _tag;
+  Tag? _tag;
 
   TagState() {
     methods = {
@@ -191,48 +185,46 @@ class TagState extends TagserState {
     );
   }
 
-  TagserResult process(ProcessMessage msg, TagserContext context) {
+  TagserResult? process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
-    if (charCode == CHAR_EOS) {
+    if (charCode == charEos) {
       return TagserResult(
         err: TagserError(
-            code: ERROR_UNEXPECTED_EOS,
-            text: getError(ERROR_UNEXPECTED_EOS, null)),
+            code: errorUnexpectedEos, text: getError(errorUnexpectedEos, null)),
       );
     } else if (TagserUtils.isAvailableCharacter(charCode)) {
       return TagserResult(
         state: AttrState(),
         message: InitMessage(charCode: charCode),
       );
-    } else if (charCode == CHAR_SLASH) {
+    } else if (charCode == charSlash) {
       return TagserResult(
         state: GetCloseBracket(),
       );
-    } else if (charCode == CHAR_CLOSE_BRACKET) {
+    } else if (charCode == charCloseBracket) {
       return TagserResult(
         state: RootState(_tag),
       );
-    } else if (charCode == CHAR_SPACE) {
+    } else if (charCode == charSpace) {
       return null;
     } else {
       return TagserResult(
         err: TagserError(
-            code: ERROR_TAG_MALFORMED,
-            text: getError(ERROR_TAG_MALFORMED, null)),
+            code: errorTagMalformed, text: getError(errorTagMalformed, null)),
       );
     }
   }
 
-  TagserResult notify(NotifyMessage msg, TagserContext context) {
+  TagserResult? notify(NotifyMessage msg, TagserContext context) {
     switch (msg.type) {
-      case NOTIFY_TAG_NAME_RESULT:
-        final String tagName = msg.value != null ? msg.value.toString() : null;
+      case notifyTagNameResult:
+        final String? tagName = msg.value?.toString();
 
         _tag = Tag(
-            name: tagName,
-            type: TYPE_TAG,
-            symbol: context.symbol,
+            name: tagName ?? '',
+            type: typeTag,
+            symbol: context.symbol ?? 0,
             line: context.line);
         return TagserResult(
           message: ProcessMessage(
@@ -249,34 +241,34 @@ class TagState extends TagserState {
         );
         */
 
-      case NOTIFY_ATTR_RESULT:
-        _tag.addAttr(msg.value);
+      case notifyAttrResult:
+        _tag!.addAttr(msg.value);
         return TagserResult(
           message: ProcessMessage(
             charCode: msg.charCode,
           ),
         );
 
-      case NOTIFY_CLOSE_BRACKET_FOUND:
+      case notifyCloseBracketFound:
         return TagserResult(
           pop: true,
           message: NotifyMessage(
-            type: NOTIFY_TAG_RESULT,
+            type: notifyTagResult,
             value: _tag,
           ),
         );
 
-      case NOTIFY_CLOSE_TAG:
+      case notifyCloseTag:
         if (msg.value != null && msg.value is List) {
-          (msg.value as List).forEach((t) {
-            _tag.addChild(t);
-          });
+          for (final t in (msg.value as List)) {
+            _tag!.addChild(t);
+          }
         }
 
         return TagserResult(
           pop: true,
           message: NotifyMessage(
-            type: NOTIFY_TAG_RESULT,
+            type: notifyTagResult,
             value: _tag,
           ),
         );
@@ -298,35 +290,34 @@ class TagNameState extends TagserState {
     };
   }
 
-  TagserResult process(ProcessMessage msg, TagserContext context) {
+  TagserResult? process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
-    if (charCode == CHAR_EOS) {
+    if (charCode == charEos) {
       return TagserResult(
         err: TagserError(
-            code: ERROR_UNEXPECTED_EOS,
-            text: getError(ERROR_UNEXPECTED_EOS, null)),
+            code: errorUnexpectedEos, text: getError(errorUnexpectedEos, null)),
       );
     } else if (TagserUtils.isAvailableCharacter(charCode)) {
-      _name += String.fromCharCode(charCode);
-    } else if (charCode == CHAR_CLOSE_BRACKET ||
-        charCode == CHAR_SPACE ||
-        charCode == CHAR_SLASH) {
+      _name += String.fromCharCode(charCode!);
+    } else if (charCode == charCloseBracket ||
+        charCode == charSpace ||
+        charCode == charSlash) {
       return TagserResult(
         pop: true,
         message: NotifyMessage(
           value: _name,
           charCode: charCode,
-          type: NOTIFY_TAG_NAME_RESULT,
+          type: notifyTagNameResult,
         ),
       );
     } else {
       return TagserResult(
         err: TagserError(
-          code: ERROR_WRONG_TAG_CHARACTER,
+          code: errorWrongTagCharacter,
           text: getError(
-            ERROR_WRONG_TAG_CHARACTER,
-            {'char': String.fromCharCode(charCode)},
+            errorWrongTagCharacter,
+            {'char': String.fromCharCode(charCode!)},
           ),
         ),
       );
@@ -355,25 +346,25 @@ class CloseTag extends TagserState {
     );
   }
 
-  TagserResult process(ProcessMessage msg, TagserContext context) {
+  TagserResult? process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
     switch (charCode) {
-      case CHAR_EOS:
+      case charEos:
         return TagserResult(
           err: TagserError(
-              code: ERROR_UNEXPECTED_EOS,
-              text: getError(ERROR_UNEXPECTED_EOS, null)),
+              code: errorUnexpectedEos,
+              text: getError(errorUnexpectedEos, null)),
         );
 
-      case CHAR_SPACE:
+      case charSpace:
         return null;
 
-      case CHAR_CLOSE_BRACKET:
+      case charCloseBracket:
         return TagserResult(
           pop: true,
           message: NotifyMessage(
-            type: NOTIFY_CLOSE_TAG_FOUND,
+            type: notifyCloseTagFound,
           ),
         );
 
@@ -382,9 +373,9 @@ class CloseTag extends TagserState {
     }
   }
 
-  TagserResult notify(NotifyMessage msg, TagserContext context) {
+  TagserResult? notify(NotifyMessage msg, TagserContext context) {
     switch (msg.type) {
-      case NOTIFY_TAG_NAME_RESULT:
+      case notifyTagNameResult:
         String source = tagName;
         String result = msg.value;
 
@@ -396,8 +387,8 @@ class CloseTag extends TagserState {
         if (source != result) {
           return TagserResult(
             err: TagserError(
-              code: ERROR_WRONG_CLOSE_TAG,
-              text: getError(ERROR_WRONG_CLOSE_TAG, {'tag': msg.value}),
+              code: errorWrongCloseTag,
+              text: getError(errorWrongCloseTag, {'tag': msg.value}),
             ),
           );
         }
@@ -415,8 +406,8 @@ class CloseTag extends TagserState {
 /// ATTR STATE
 
 class AttrState extends TagserState {
-  String _name;
-  String _value;
+  String _name = '';
+  String? _value;
 
   AttrState() {
     methods = {
@@ -435,13 +426,7 @@ class AttrState extends TagserState {
   TagserResult process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
-    if (charCode == CHAR_EOS) {
-      return TagserResult(
-        err: TagserError(
-            code: ERROR_UNEXPECTED_EOS,
-            text: getError(ERROR_UNEXPECTED_EOS, null)),
-      );
-    } else if (charCode == CHAR_EQUAL) {
+    if (charCode == charEqual) {
       return TagserResult(
         state: AttrValueState(),
       );
@@ -451,16 +436,16 @@ class AttrState extends TagserState {
         pop: true,
         message: NotifyMessage(
             charCode: msg.charCode,
-            type: NOTIFY_ATTR_RESULT,
+            type: notifyAttrResult,
             value: TagAttribute(
               name: _name,
               value: _value ?? 'true',
             )));
   }
 
-  TagserResult notify(NotifyMessage msg, TagserContext context) {
+  TagserResult? notify(NotifyMessage msg, TagserContext context) {
     switch (msg.type) {
-      case NOTIFY_ATTR_NAME_RESULT:
+      case notifyAttrNameResult:
         final res = TagserResult();
 
         _name = msg.value;
@@ -469,16 +454,8 @@ class AttrState extends TagserState {
         );
 
         return res;
-      case NOTIFY_ATTR_VALUE_RESULT:
-        if (msg.value is String && msg.value.isNotEmpty) {
-          _value = msg.value;
-        } else {
-          return TagserResult(
-              err: TagserError(
-            code: ERROR_ATTR_VALUE_EMPTY,
-            text: getError(ERROR_ATTR_VALUE_EMPTY, {}),
-          ));
-        }
+      case notifyAttrValueResult:
+        _value = msg.value ?? '';
 
         return null;
       default:
@@ -490,32 +467,29 @@ class AttrState extends TagserState {
 /// ATTR NAME STATE
 
 class AttrNameState extends TagserState {
-  String _name;
+  String _name = '';
 
   AttrNameState() {
-    _name = '';
-
     methods = {
       'process': (msg, context) => process(msg, context),
     };
   }
 
-  TagserResult process(ProcessMessage msg, TagserContext context) {
+  TagserResult? process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
-    if (charCode == CHAR_EOS) {
+    if (charCode == charEos) {
       return TagserResult(
         err: TagserError(
-            code: ERROR_UNEXPECTED_EOS,
-            text: getError(ERROR_UNEXPECTED_EOS, null)),
+            code: errorUnexpectedEos, text: getError(errorUnexpectedEos, null)),
       );
     } else if (TagserUtils.isAvailableCharacter(charCode)) {
-      _name += String.fromCharCode(charCode);
+      _name += String.fromCharCode(charCode!);
     } else {
       return TagserResult(
         pop: true,
         message: NotifyMessage(
-          type: NOTIFY_ATTR_NAME_RESULT,
+          type: notifyAttrNameResult,
           charCode: charCode,
           value: _name,
         ),
@@ -530,7 +504,7 @@ class AttrNameState extends TagserState {
 
 class AttrValueState extends TagserState {
   String _value = '';
-  int _quote;
+  int _quote = -1;
   bool isFirstChar = true;
 
   AttrValueState() {
@@ -539,25 +513,24 @@ class AttrValueState extends TagserState {
     };
   }
 
-  TagserResult process(ProcessMessage msg, TagserContext context) {
+  TagserResult? process(ProcessMessage msg, TagserContext context) {
     final charCode = msg.charCode;
 
-    if (charCode == CHAR_EOS) {
+    if (charCode == charEos) {
       return TagserResult(
         err: TagserError(
-            code: ERROR_UNEXPECTED_EOS,
-            text: getError(ERROR_UNEXPECTED_EOS, null)),
+            code: errorUnexpectedEos, text: getError(errorUnexpectedEos, null)),
       );
     } else if (isFirstChar) {
       isFirstChar = false;
 
-      if (charCode == CHAR_QUOTE || charCode == CHAR_SINGLE_QUOTE) {
-        _quote = charCode;
+      if (charCode == charQuote || charCode == charSingleQuote) {
+        _quote = charCode!;
       } else {
         return TagserResult(
           err: TagserError(
-            code: ERROR_ATTR_VALUE_MALFORMED,
-            text: getError(ERROR_ATTR_VALUE_MALFORMED, {}),
+            code: errorAttrValueMalformed,
+            text: getError(errorAttrValueMalformed, {}),
           ),
         );
       }
@@ -566,12 +539,10 @@ class AttrValueState extends TagserState {
         return TagserResult(
           pop: true,
           message: NotifyMessage(
-              type: NOTIFY_ATTR_VALUE_RESULT,
-              value: _value,
-              charCode: charCode),
+              type: notifyAttrValueResult, value: _value, charCode: charCode),
         );
       } else {
-        _value += String.fromCharCode(charCode);
+        _value += String.fromCharCode(charCode!);
       }
     }
 
@@ -590,28 +561,28 @@ class GetCloseBracket extends TagserState {
 
   TagserResult process(ProcessMessage msg, TagserContext context) {
     switch (msg.charCode) {
-      case CHAR_EOS:
+      case charEos:
         return TagserResult(
           err: TagserError(
-              code: ERROR_UNEXPECTED_EOS,
-              text: getError(ERROR_UNEXPECTED_EOS, null)),
+              code: errorUnexpectedEos,
+              text: getError(errorUnexpectedEos, null)),
         );
 
-      case CHAR_CLOSE_BRACKET:
+      case charCloseBracket:
         return TagserResult(
           pop: true,
           message: NotifyMessage(
             charCode: msg.charCode,
-            type: NOTIFY_CLOSE_BRACKET_FOUND,
+            type: notifyCloseBracketFound,
           ),
         );
 
       default:
         return TagserResult(
           err: TagserError(
-              code: ERROR_WRONG_CHARACTER_GIVEN,
-              text: getError(ERROR_WRONG_CHARACTER_GIVEN,
-                  {'char': String.fromCharCode(msg.charCode), 'await': '>'})),
+              code: errorWrongCharacterGiven,
+              text: getError(errorWrongCharacterGiven,
+                  {'char': String.fromCharCode(msg.charCode!), 'await': '>'})),
         );
     }
   }

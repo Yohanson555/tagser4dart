@@ -6,7 +6,7 @@ abstract class TagserMessage {
 
 class InitMessage extends TagserMessage {
   final dynamic value;
-  final int charCode;
+  final int? charCode;
 
   InitMessage({this.value, this.charCode});
 
@@ -15,7 +15,7 @@ class InitMessage extends TagserMessage {
 }
 
 class ProcessMessage extends TagserMessage {
-  final int charCode;
+  final int? charCode;
 
   @override
   String getName() => 'process';
@@ -26,8 +26,8 @@ class ProcessMessage extends TagserMessage {
 }
 
 class NotifyMessage extends TagserMessage {
-  final int charCode;
-  final int type;
+  final int? charCode;
+  final int? type;
   final dynamic value;
 
   @override

@@ -1,11 +1,11 @@
 part of tagser;
 
 class TagserResult {
-  TagserState state;
-  bool pop;
-  TagserError err;
-  String result;
-  TagserMessage message;
+  TagserState? state;
+  bool? pop;
+  TagserError? err;
+  String? result;
+  TagserMessage? message;
 
   TagserResult({
     this.state,

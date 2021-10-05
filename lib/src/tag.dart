@@ -1,20 +1,21 @@
 part of tagser;
 
 class Tag {
-  String _name;
-  String _type;
-  Map<String, TagAttribute> _attributes;
-  List<Tag> _childs;
-  String _body;
-  int _line;
-  int _symbol;
+  String _name = '';
+  String? _type;
+  String? _body;
+  int? _line;
+  int _symbol = 0;
+
+  Map<String, TagAttribute> _attributes = {};
+  List<Tag> _childs = [];
 
   Tag({
-    String name,
-    String type,
-    String body,
-    int line,
-    int symbol
+    required String name,
+    required int symbol,
+    String? type,
+    String? body,
+    int? line,
   }) {
     _name = name;
     _type = type;
@@ -25,37 +26,33 @@ class Tag {
     _symbol = symbol;
   }
 
-  addAttr(TagAttribute attr) {
-    if (_attributes == null) _attributes = {};
-
+  addAttr(TagAttribute? attr) {
     if (attr != null) {
       _attributes[attr.name] = attr;
     }
   }
 
   addChild(Tag child) {
-    if (_childs == null) _childs = [];
-
     _childs.add(child);
   }
 
   attrValue(String name) {
     if (_attributes.containsKey(name)) {
-      return _attributes[name].value;
+      return _attributes[name]!.value;
     }
 
     return null;
   }
 
-  String get name {
+  String? get name {
     return _name;
   }
 
-  String get type {
+  String? get type {
     return _type;
   }
 
-  String get body {
+  String? get body {
     return _body;
   }
 
@@ -67,11 +64,11 @@ class Tag {
     return _attributes;
   }
 
-  int get line {
+  int? get line {
     return _line;
   }
 
-  int get symbol {
-    return _symbol - _name.length - 1; // start of tag
+  int? get symbol {
+      return _symbol - _name.length - 1; // start of tag
   }
 }

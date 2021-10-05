@@ -12,6 +12,11 @@ Attributes types:
 - bool: <tag bordered /> - will be converted to `bordered='true'`
 - with value: <tag bordered='false' width='7' /> - value should be placed in single or double quotes
 
+## Methods
+
+`parse(String source)` - parsing source string of tags into a list of `Tag` objects.
+`html(List<Tag> tags)` - converting a list of `Tag` objects into a correct HTML body.
+
 ## Usage
 
 A simple usage example:
@@ -21,15 +26,18 @@ import 'package:tagser/tagser.dart';
 
 main() {
   var tagser = new Tagser();
-  var html = '<hello> Hello bro </hello>';
+  var source = '<line show/><hello> Hello bro </hello><br />';
   
-  var list =  tagser.parse(html);
+  var tags =  tagser.parse(source);
+  var html = tagser.html(tags);
+  
+  print(html); //prints: <line show="true"></line><hello> Hello bro </hello><br></br>
 }
 ```
 
 ## Notes
 
-- Tag names are case sensitive. Open and close tags in block tag declaration should have the same spelling
+- Tag names are case sensitive. Open and close tags in block tag declaration should have the same spelling. It can be changed by passing `"ignoreCase": true` as option to `Tagser`
 - Attribute names are case sensitive: attribute `A` and attribute `a` are not the same
 
 ## Restrictions
